@@ -1,0 +1,98 @@
+---
+- name: Ejecutar planchado controlado de Conauto desde Semaphore hacia QA
+  hosts: planchado_conauto
+  become: true
+  gather_facts: true
+  serial: 1
+  any_errors_fatal: true
+
+  vars:
+    script_local: "{{ playbook_dir }}/../scripts/Plancha-Conauto-Semaphore.sh"
+    script_remote: /usr/local/sbin/plancha-conauto-semaphore
+    expected_semaphore_server_ip: "{{ semaphore_server_ip | default('172.20.54.160') }}"
+    expected_target_qa_ip: "{{ target_qa_ip | default(ansible_host | default('172.20.54.217')) }}"
+    expected_backup_host: "{{ backup_host | default('172.20.54.202') }}"
+
+  pre_tasks:
+    - name: Validar confirmación explícita del operador
+      ansible.builtin.assert:
+        that:
+          - confirmacion | default('') == 'PLANCHAR_CONAUTO'
+        fail_msg: >-
+          Ejecución cancelada. En Semaphore capture PLANCHAR_CONAUTO
+          en el campo de confirmación.
+
+    - name: Validar que el ambiente no sea producción
+      ansible.builtin.assert:
+        that:
+          - ambiente | default('QA') in ['QA', 'DESARROLLO']
+        fail_msg: "Este template solo permite QA o DESARROLLO. No debe ejecutarse contra Producción."
+
+    - name: Validar que solo exista un destino de planchado por ejecución
+      ansible.builtin.assert:
+        that:
+          - ansible_play_hosts_all | length == 1
+        fail_msg: "Por seguridad, el template debe ejecutarse contra un solo servidor QA por corrida."
+
+    - name: Mostrar topología declarada
+      ansible.builtin.debug:
+        msg:
+          - "Servidor Semaphore / Ansible controller: {{ expected_semaphore_server_ip }}"
+          - "Servidor destino QA: {{ inventory_hostname }} / {{ expected_target_qa_ip }}"
+          - "Servidor origen de respaldos: {{ expected_backup_host }}"
+          - "Flujo: Semaphore {{ expected_semaphore_server_ip }} -> SSH -> QA {{ expected_target_qa_ip }}; QA -> SSH/SCP -> Producción {{ expected_backup_host }}"
+
+    - name: Validar IP del servidor destino QA detectada por Ansible
+      ansible.builtin.assert:
+        that:
+          - expected_target_qa_ip in ansible_all_ipv4_addresses
+        fail_msg: >-
+          El host gestionado por Ansible no reporta la IP QA esperada {{ expected_target_qa_ip }}.
+          IPs detectadas: {{ ansible_all_ipv4_addresses }}.
+          Revise el inventario antes de ejecutar el planchado.
+        success_msg: "Servidor QA validado: {{ expected_target_qa_ip }}"
+      when: not (allow_target_ip_mismatch | default(false) | bool)
+
+  tasks:
+    - name: Instalar versión controlada del script en QA
+      ansible.builtin.copy:
+        src: "{{ script_local }}"
+        dest: "{{ script_remote }}"
+        owner: root
+        group: root
+        mode: "0750"
+        validate: "/usr/bin/bash -n %s"
+
+    - name: Ejecutar planchado en servidor QA
+      ansible.builtin.command:
+        argv:
+          - "{{ script_remote }}"
+      environment:
+        CONFIRMACION: "{{ confirmacion }}"
+        DRY_RUN: "{{ dry_run | default(true) | bool | ternary('true', 'false') }}"
+        KEEP_PREVIOUS: "{{ keep_previous | default(true) | bool | ternary('true', 'false') }}"
+        DLC: "{{ dlc | default('/usr/dlc') }}"
+        HOMEDB: "{{ homedb | default('/home/Sistemas/Conauto') }}"
+        STS: "{{ sts | default('/usr/wrk/Sts/Conauto') }}"
+        PROBAKLOCAL: "{{ probaklocal | default('/home/backups/Conauto/proBak') }}"
+        SEMAPHORE_SERVER_IP: "{{ expected_semaphore_server_ip }}"
+        TARGET_QA_IP: "{{ expected_target_qa_ip }}"
+        BACKUP_HOST: "{{ expected_backup_host }}"
+        BACKUP_USER: "{{ backup_user | default('backup_reader') }}"
+        ORIGDB: "{{ origdb | default('/home/backups/Conauto/proBak') }}"
+        BACKUP_SSH_KEY: "{{ backup_ssh_key | default('/root/.ssh/id_ed25519_backup_reader') }}"
+        BACKUP_KNOWN_HOSTS: "{{ backup_known_hosts | default('/root/.ssh/known_hosts') }}"
+        ALLOW_TARGET_IP_MISMATCH: "{{ allow_target_ip_mismatch | default(false) | bool | ternary('true', 'false') }}"
+        PAS_INSTANCE: "{{ pas_instance | default('afnv8') }}"
+        PF_FILE: "{{ pf_file | default('/root/bin/obj/conautov11.pf') }}"
+        POST_PROGRAM: "{{ post_program | default('/root/bin/obj/planchado_qa11x.r') }}"
+        LOG_DIR: "{{ log_dir | default('/var/log/planchado-conauto') }}"
+        MIN_FREE_GB: "{{ min_free_gb | default(20) | string }}"
+        BACKUP_MAX_AGE_HOURS: "{{ backup_max_age_hours | default(48) | string }}"
+        SEMAPHORE_TASK_ID: "{{ lookup('env', 'SEMAPHORE_TASK_ID') | default(ansible_date_time.epoch, true) }}"
+      register: planchado_result
+      changed_when: not (dry_run | default(true) | bool)
+
+    - name: Mostrar salida del planchado
+      ansible.builtin.debug:
+        var: planchado_result.stdout_lines

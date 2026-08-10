@@ -1,0 +1,23 @@
+{
+  "ambiente": "QA",
+  "semaphore_server_ip": "172.20.54.160",
+  "target_qa_ip": "172.20.54.217",
+  "backup_host": "172.20.54.202",
+  "dlc": "/usr/dlc",
+  "homedb": "/home/Sistemas/Conauto",
+  "sts": "/usr/wrk/Sts/Conauto",
+  "probaklocal": "/home/backups/Conauto/proBak",
+  "backup_user": "backup_reader",
+  "origdb": "/home/backups/Conauto/proBak",
+  "backup_ssh_key": "/root/.ssh/id_ed25519_backup_reader",
+  "backup_known_hosts": "/root/.ssh/known_hosts",
+  "allow_target_ip_mismatch": false,
+  "pas_instance": "afnv8",
+  "pf_file": "/root/bin/obj/conautov11.pf",
+  "post_program": "/root/bin/obj/planchado_qa11x.r",
+  "log_dir": "/var/log/planchado-conauto",
+  "min_free_gb": 20,
+  "backup_max_age_hours": 48,
+  "keep_previous": true,
+  "dry_run": true
+}
