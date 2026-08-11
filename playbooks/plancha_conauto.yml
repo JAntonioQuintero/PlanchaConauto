@@ -63,6 +63,13 @@
         mode: "0750"
         validate: "/usr/bin/bash -n %s"
 
+    - name: Mostrar variables efectivas de planchado
+      ansible.builtin.debug:
+        msg:
+          - "pf_file={{ pf_file | default('NO DEFINIDA') }}"
+          - "PF_FILE efectivo={{ pf_file | default('/root/bin/obj/conautov12.pf') }}"
+          - "post_program={{ post_program | default('/root/bin/obj/planchado_qa11x.r') }}"
+
     - name: Ejecutar planchado en servidor QA
       ansible.builtin.command:
         argv:
@@ -84,7 +91,7 @@
         BACKUP_KNOWN_HOSTS: "{{ backup_known_hosts | default('/root/.ssh/known_hosts') }}"
         ALLOW_TARGET_IP_MISMATCH: "{{ allow_target_ip_mismatch | default(false) | bool | ternary('true', 'false') }}"
         PAS_INSTANCE: "{{ pas_instance | default('afnv8') }}"
-        PF_FILE: "{{ pf_file | default('/root/bin/obj/conautov11.pf') }}"
+        PF_FILE: "{{ pf_file | default('/root/bin/obj/conautov12.pf') }}"
         POST_PROGRAM: "{{ post_program | default('/root/bin/obj/planchado_qa11x.r') }}"
         LOG_DIR: "{{ log_dir | default('/var/log/planchado-conauto') }}"
         MIN_FREE_GB: "{{ min_free_gb | default(20) | string }}"

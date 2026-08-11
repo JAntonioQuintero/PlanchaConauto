@@ -32,7 +32,7 @@ ALLOW_TARGET_IP_MISMATCH="${ALLOW_TARGET_IP_MISMATCH:-false}"
 
 PAS_INSTANCE="${PAS_INSTANCE:-afnv8}"
 SENTINEL="${SENTINEL:-/home/appDir/Sistemas/Conauto/com/wsApp/wsERP/tmp/Stop.txt}"
-PF_FILE="${PF_FILE:-/root/bin/obj/conautov11.pf}"
+PF_FILE="${PF_FILE:-/root/bin/obj/conautov12.pf}"
 POST_PROGRAM="${POST_PROGRAM:-/root/bin/obj/planchado_qa11x.r}"
 LOG_DIR="${LOG_DIR:-/var/log/planchado-conauto}"
 LOCK_FILE="${LOCK_FILE:-/var/lock/planchado-conauto.lock}"
