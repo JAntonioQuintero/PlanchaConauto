@@ -323,7 +323,7 @@ done
 
 PHASE="post_planchado"
 log INFO "Ejecutando programa postplanchado en modo batch"
-run "$DLC/bin/pro" -b -pf "$PF_FILE" -p "$POST_PROGRAM"
+run "export TERM=xterm && $DLC/bin/pro" -b -pf "$PF_FILE" -p "$POST_PROGRAM"
 
 PHASE="arranque_servicios"
 for alias in "${DB_ALIASES[@]}"; do
